@@ -4,21 +4,16 @@ import matplotlib.pyplot as plt
 from numba import jit, prange
 import os
 
-FILENAME = 'mnist_train.csv'
+FILENAME = 'mnist_test.csv'
 USE_KAGGLEHUB = True
-LOCAL_FILENAME = "mnist_train.csv"
-NUM_TRAIN_SAMPLES = 122
+LOCAL_FILENAME = "mnist_test.csv"
+NUM_TRAIN_SAMPLES = 128
 
-learning_rate = 0.005
-epochs = 50
+learning_rate = 0.001
+epochs = 15
 batch_size = 32
 dropout_rate = 0.3
 lambda_l2_weights = 0.001
-lambda_l2_biases = 0
-beta1 = 0.9
-beta2 = 0.999
-epsilon = 1e-7
-
 
 
 @jit(nopython=True, parallel=True)
@@ -178,13 +173,10 @@ class Layer_Dropout:
 
 
 class Conv2D:
-    def __init__(self, num_filters, in_channel, kernel_size, weights_lambda_l2=0, bias_lambda_l2=0):
+    def __init__(self, num_filters, in_channel, kernel_size):
         self.num_filters = num_filters
         self.in_channel = in_channel
         self.kernel_size = kernel_size
-        self.weights_lambda_l2 = weights_lambda_l2
-        self.bias_lambda_l2 = bias_lambda_l2
-
 
         scale = np.sqrt(2.0 / (in_channel * kernel_size * kernel_size))
         self.weights = np.random.randn(num_filters, in_channel, kernel_size, kernel_size) * scale
@@ -217,12 +209,6 @@ class Conv2D:
         self.dbiases = np.zeros_like(self.biases)
         for f in range(self.num_filters):
             self.dbiases[f] = np.sum(dvalues[:, f, :, :])
-
-        if self.weights_lambda_l2 > 0:
-            self.dweights += 2 * self.weights_lambda_l2 * self.weights
-        if self.bias_lambda_l2 > 0:
-            self.dbiases += 2 * self.bias_lambda_l2 * self.biases
-
 
         return self.dinputs
 
@@ -276,10 +262,10 @@ class Loss:
     def regularization_loss(self, layers):
         reg_loss = 0
         for layer in layers:
-            if isinstance(layer, (Layer_Dense, Conv2D)):
-                if hasattr(layer, 'weights_lambda_l2') and layer.weights_lambda_l2 > 0:
+            if isinstance(layer, Layer_Dense):
+                if layer.weights_lambda_l2 > 0:
                     reg_loss += layer.weights_lambda_l2 * np.sum(layer.weights * layer.weights)
-                if hasattr(layer, 'bias_lambda_l2') and layer.bias_lambda_l2 > 0:
+                if layer.bias_lambda_l2 > 0:
                     reg_loss += layer.bias_lambda_l2 * np.sum(layer.biases * layer.biases)
         return 0.5 * reg_loss
 
@@ -412,9 +398,9 @@ if USE_KAGGLEHUB:
 
         print(f"Found CSV files: {[os.path.basename(f) for f in csv_files]}")
 
-        train_files = [f for f in csv_files if 'train' in os.path.basename(f).lower()]
-        if train_files:
-            FILENAME = train_files[0]
+        test_files = [f for f in csv_files if 'test' in os.path.basename(f).lower()]
+        if test_files:
+            FILENAME = test_files[0]
         else:
             FILENAME = csv_files[0]
 
@@ -460,7 +446,6 @@ pixels = pixels / 255.0
 num_samples = pixels.shape[0]
 images = pixels.reshape(num_samples, 1, 28, 28)
 
-
 images = images[:NUM_TRAIN_SAMPLES]
 labels = labels[:NUM_TRAIN_SAMPLES]
 num_samples = len(images)
@@ -470,11 +455,11 @@ print(f"Image shape: {images.shape}")
 print(f"Labels shape: {labels.shape}")
 print(f"Unique labels: {np.unique(labels)}\n")
 
-conv1 = Conv2D(num_filters=8, in_channel=1, kernel_size=3, weights_lambda_l2=lambda_l2_weights)
+conv1 = Conv2D(num_filters=8, in_channel=1, kernel_size=3)
 activation_conv1 = Activation_LeakyReLU(alpha=0.01)
 pool1 = MaxPool2D(pool_size=2, stride=2)
 
-conv2 = Conv2D(num_filters=16, in_channel=8, kernel_size=3, weights_lambda_l2=lambda_l2_weights)
+conv2 = Conv2D(num_filters=16, in_channel=8, kernel_size=3)
 activation_conv2 = Activation_LeakyReLU(alpha=0.01)
 pool2 = MaxPool2D(pool_size=2, stride=2)
 
@@ -525,16 +510,12 @@ for epoch in range(epochs):
 
         dense2_cnn.forward(dropout1_cnn.output)
 
-        loss_samples = loss_activation.forward(dense2_cnn.output, batch_labels)
-        data_loss = np.mean(loss_samples)
-
-        reg_loss = loss_activation.loss.regularization_loss(trainable_layers)
-        total_loss = data_loss + reg_loss
+        loss = loss_activation.forward(dense2_cnn.output, batch_labels)
 
         predictions = np.argmax(loss_activation.output, axis=1)
         accuracy = np.mean(predictions == batch_labels)
 
-        epoch_loss += total_loss
+        epoch_loss += np.mean(loss)
         epoch_acc += accuracy
 
         loss_activation.backward(loss_activation.output, batch_labels)
@@ -562,10 +543,8 @@ for epoch in range(epochs):
     avg_loss = epoch_loss / num_batches
     avg_acc = epoch_acc / num_batches
 
-    if epoch % 10 == 0 or epoch == epochs - 1:
+    if epoch % 5 == 0 or epoch == epochs - 1:
         print(f'Epoch: {epoch}/{epochs}, Loss: {avg_loss:.4f}, Accuracy: {avg_acc:.4f}')
-
-
 
 print("\nTraining completed!")
 

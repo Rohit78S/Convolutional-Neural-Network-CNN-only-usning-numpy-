@@ -4,7 +4,7 @@ This project is a complete Convolutional Neural Network (CNN) built entirely fro
 
 This network is trained on the MNIST dataset of handwritten digits, which it downloads automatically using the Kaggle API.
 
- Core Features Implemented
+Core Features Implemented
 
 This project is not a simple script; it's a complete object-oriented framework that includes:
 
@@ -42,43 +42,69 @@ Interactive Prediction: After training, the script enters a loop allowing you to
 
 The model is a 2-layer CNN with the following architecture:
 
-Input: (N, 1, 28, 28)
-  |
-  v
-Conv2D (8 filters, 3x3)   -> (N, 8, 26, 26)
-  |
-  v
-LeakyReLU
-  |
-  v
-MaxPool2D (2x2)           -> (N, 8, 13, 13)
-  |
-  v
-Conv2D (16 filters, 3x3)  -> (N, 16, 11, 11)
-  |
-  v
-LeakyReLU
-  |
-  v
-MaxPool2D (2x2)           -> (N, 16, 5, 5)
-  |
-  v
-Flatten                   -> (N, 400)  (16 * 5 * 5)
-  |
-  v
-Dense (400 -> 128)
-  |
-  v
-LeakyReLU
-  |
-  v
-Dropout (Rate: 0.3)
-  |
-  v
-Dense (128 -> 10)
-  |
-  v
-Softmax (Output Probs)
++---------------------+   Input: (N, 1, 28, 28)
+|    Input Image      |
++---------------------+
+           |
+           v
++---------------------+   Conv2D (8 filters, 3x3)
+| Conv1 (N, 8, 26, 26)  |   -> (N, 8, 26, 26)
++---------------------+
+           |
+           v
++---------------------+
+|      LeakyReLU      |
++---------------------+
+           |
+           v
++---------------------+   MaxPool2D (2x2)
+| Pool1 (N, 8, 13, 13)  |   -> (N, 8, 13, 13)
++---------------------+
+           |
+           v
++---------------------+   Conv2D (16 filters, 3x3)
+| Conv2 (N, 16, 11, 11) |   -> (N, 16, 11, 11)
++---------------------+
+           |
+           v
++---------------------+
+|      LeakyReLU      |
++---------------------+
+           |
+           v
++---------------------+   MaxPool2D (2x2)
+| Pool2 (N, 16, 5, 5)   |   -> (N, 16, 5, 5)
++---------------------+
+           |
+           v
++---------------------+   Flatten
+| Flatten (N, 400)    |   -> (N, 400)  (16 * 5 * 5)
++---------------------+
+           |
+           v
++---------------------+   Dense (400 -> 128)
+| Dense1 (N, 128)     |
++---------------------+
+           |
+           v
++---------------------+
+|      LeakyReLU      |
++---------------------+
+           |
+           v
++---------------------+   Dropout (Rate: 0.3)
+|   Dropout (N, 128)  |
++---------------------+
+           |
+           v
++---------------------+   Dense (128 -> 10)
+| Dense2 (N, 10)      |
++---------------------+
+           |
+           v
++---------------------+   Softmax
+| Output Probs (N, 10)|
++---------------------+
 
 
 ⚙️ How to Run
@@ -87,6 +113,7 @@ Install Dependencies:
 You will need numpy, pandas, matplotlib, and kagglehub.
 
 pip install numpy pandas matplotlib kagglehub
+
 
 
 Kaggle API Credentials (First Time Only):
@@ -101,6 +128,7 @@ Place this file in the correct location (e.g., C:\Users\<Your-Username>\.kaggle\
 Run the Script:
 
 python your_script_name.py
+
 
 
 The script will automatically download and cache the MNIST dataset (as mnist_test.csv) on its first run.
